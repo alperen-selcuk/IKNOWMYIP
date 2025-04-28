@@ -37,8 +37,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userAgent = req.headers['user-agent'] || '';
       
       // If the request is from cURL, return only the IP address as plain text
+      // with a newline at the end to avoid the % character issue
       if (isCurlRequest(userAgent)) {
-        return res.type('text/plain').send(ipAddress.replace(/%.*$/, ''));
+        return res.type('text/plain').send(ipAddress.replace(/%.*$/, '') + '\n');
       }
       
       // For browser requests, return detailed info
@@ -71,8 +72,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     if (isCurlRequest(userAgent)) {
       const ipAddress = getIpAddress(req);
-      // Temiz IP adresi döndür, yüzde işareti olmadan
-      return res.type('text/plain').send(ipAddress.replace(/%.*$/, ''));
+      // Temiz IP adresi döndür, yüzde işareti olmadan ve satır sonu ekleyerek
+      return res.type('text/plain').send(ipAddress.replace(/%.*$/, '') + '\n');
     }
     
     // For browser requests, pass to the next middleware (vite)
