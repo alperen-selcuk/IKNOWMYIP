@@ -1,7 +1,7 @@
 # I KNOW MY IP 🌐
 
-[![License: MIT]![image](https://github.com/user-attachments/assets/45528e5b-7c6c-4cea-b8b5-15b52d8c2ea7)
-](https://opensource.org/licenses/MIT)
+[image](https://github.com/user-attachments/assets/45528e5b-7c6c-4cea-b8b5-15b52d8c2ea7)
+
 
 > Now you know your IP address
 
