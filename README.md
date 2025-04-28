@@ -99,10 +99,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 📬 Contact
 
-Project Link: [https://github.com/yourusername/iknowmyip](https://github.com/yourusername/iknowmyip)
 
 ---
 
-Made with ❤️ by [Your Name]
+Made with ❤️ by Hasan Alperen SELÇUK
