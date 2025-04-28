@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+      --background: 0 0% 100%;
+--foreground: 20 14.3% 4.1%;
+--muted: 270 4.8% 95.9%;
+--muted-foreground: 25 5.3% 44.7%;
+--popover: 0 0% 100%;
+--popover-foreground: 20 14.3% 4.1%;
+--card: 0 0% 100%;
+--card-foreground: 20 14.3% 4.1%;
+--border: 270 5.9% 90%;
+--input: 270 5.9% 90%;
+--primary: 270 75% 60%; /* Lila tonları için değiştirildi */
+--primary-foreground: 275 100% 99%;
+--secondary: 280 65% 55%; /* Lila tonları için değiştirildi */
+--secondary-foreground: 0 0% 100%;
+--accent: 265 70% 70%; /* Lila tonları için değiştirildi */
+--accent-foreground: 0 0% 100%;
+--destructive: 0 84.2% 60.2%;
+--destructive-foreground: 60 9.1% 97.8%;
+--ring: 270 75% 60%;
+--radius: 0.5rem;
+  }
+  .dark {
+      --background: 280 10% 5%;
+--foreground: 270 10% 95%;
+--muted: 270 8% 20%;
+--muted-foreground: 270 5% 70%;
+--popover: 280 10% 5%;
+--popover-foreground: 270 10% 95%;
+--card: 280 10% 5%;
+--card-foreground: 270 10% 95%;
+--border: 270 8% 20%;
+--input: 270 8% 20%;
+--primary: 270 70% 65%; /* Lila tonları için değiştirildi */
+--primary-foreground: 270 10% 100%;
+--secondary: 280 60% 50%; /* Lila tonları için değiştirildi */
+--secondary-foreground: 0 0% 100%;
+--accent: 265 60% 45%; /* Lila tonları için değiştirildi */
+--accent-foreground: 0 0% 100%;
+--destructive: 0 62.8% 30.6%;
+--destructive-foreground: 0 0% 98%;
+--ring: 270 70% 65%;
+--radius: 0.5rem;
+  }
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
