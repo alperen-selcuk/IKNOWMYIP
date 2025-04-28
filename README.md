@@ -1,6 +1,7 @@
 # I KNOW MY IP 🌐
 
-![image](https://github.com/user-attachments/assets/36798330-bf61-42c4-9a1d-a9b999f0306e)
+![image](https://github.com/user-attachments/assets/7dc71af7-d8a0-4fb4-8416-fd5a087a723c)
+
 
 
 > Now you know your IP address
