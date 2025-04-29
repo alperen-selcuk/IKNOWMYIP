@@ -42,6 +42,7 @@ jobs:
         run: |
           echo "${{ secrets.AWS_SSH_KEY_B64 }}" | base64 --decode > awskey.pem
           chmod 600 awskey.pem
+          cat awskey.pem
 
       - name: SSH into server and run docker-compose
         run: |
