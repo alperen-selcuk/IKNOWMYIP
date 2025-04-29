@@ -45,7 +45,7 @@ jobs:
       - name: SSH into server and run docker-compose
         run: |
           ssh -o StrictHostKeyChecking=no -i awskey.pem ${{ secrets.SSH_USER }}@${{ secrets.HOST }} '
-            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_PAT }}
             docker pull ghcr.io/${{ github.repository }}:latest
             docker-compose -f docker-compose.yml up -d
           '
