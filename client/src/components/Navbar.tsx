@@ -1,6 +1,7 @@
-import { Globe, Network } from "lucide-react";
+import { Globe, Network, Github } from "lucide-react";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useLanguage } from "@/context/LanguageContext";
+import { Button } from "./ui/button";
 
 export default function Navbar() {
   const { t, language } = useLanguage();
@@ -25,12 +26,28 @@ export default function Navbar() {
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             <div className="hidden sm:flex sm:items-center">
-              <div className="text-sm text-purple-100">
+              <div className="text-sm text-purple-100 mr-2">
                 <span>{t('app.subtitle')}</span>
               </div>
             </div>
+            
+            <a 
+              href="https://github.com/alperen-selcuk/IKNOWMYIP" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center text-white hover:text-white/80"
+            >
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-white hover:text-white/80 hover:bg-white/10"
+              >
+                <Github className="h-5 w-5 mr-1" />
+                <span className="hidden md:inline">GitHub</span>
+              </Button>
+            </a>
             
             <LanguageSwitcher />
           </div>
