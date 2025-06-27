@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import rateLimit from "express-rate-limit";
 import { storage } from "./storage";
 import dns from "dns";
 import { promisify } from "util";
@@ -12,6 +13,18 @@ import { z } from "zod";
 const resolveMx = promisify(dns.resolveMx);
 const resolveNs = promisify(dns.resolveNs);
 const resolve4 = promisify(dns.resolve4);
+
+// Curl requests rate limiter
+const curlLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 60, // limit each IP to 60 curl requests per minute
+  message: 'Rate limit exceeded for curl requests\n',
+  standardHeaders: false, // Don't send headers for curl requests
+  legacyHeaders: false,
+  handler: (req, res) => {
+    res.type('text/plain').status(429).send('Rate limit exceeded. Please try again later.\n');
+  }
+});
 
 // Helper function to determine if request is from cURL
 function isCurlRequest(userAgent: string): boolean {
@@ -66,8 +79,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Root route - handles curl requests, browser requests are handled by vite middleware
-  app.get('/', (req: Request, res: Response, next: any) => {
+  // Root route - handles curl requests with rate limiting
+  app.get('/', curlLimiter, (req: Request, res: Response, next: any) => {
     const userAgent = req.headers['user-agent'] || '';
     
     if (isCurlRequest(userAgent)) {
