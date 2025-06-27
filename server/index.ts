@@ -1,8 +1,23 @@
 import express, { type Request, Response, NextFunction } from "express";
+import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+// Rate limiter'ı Docker proxy'sinin arkasında doğru IP'yi alacak şekilde ayarla
+app.set("trust proxy", 1);
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 dakika
+  max: 100, // Her IP için 15 dakikada 100 istek
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Limitleyiciyi tüm /api rotalarına uygula
+app.use("/api", limiter);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
