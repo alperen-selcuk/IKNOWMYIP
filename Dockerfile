@@ -5,23 +5,18 @@ RUN apk add --no-cache dumb-init
 
 WORKDIR /app
 
-# Create node_modules directory with proper permissions
-RUN mkdir -p node_modules && chown -R node:node /app
+# Copy package files first
+COPY package*.json ./
 
-# Switch to node user for security
-USER node
+# Clean install without package-lock to avoid conflicts
+RUN rm -f package-lock.json && \
+    npm cache clean --force && \
+    npm install
 
-# Copy package files with proper ownership
-COPY --chown=node:node package*.json ./
+# Copy all files
+COPY . .
 
-# Clear npm cache and install dependencies
-RUN npm cache clean --force && \
-    npm install --no-optional --production=false
-
-# Copy all files with proper ownership
-COPY --chown=node:node . .
-
-# Build frontend application (in production mode)
+# Build frontend application
 RUN npm run build
 
 # Expose the port
