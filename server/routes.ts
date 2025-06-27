@@ -1,6 +1,5 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import rateLimit from "express-rate-limit";
 import { storage } from "./storage";
 import dns from "dns";
 import { promisify } from "util";
@@ -13,18 +12,6 @@ import { z } from "zod";
 const resolveMx = promisify(dns.resolveMx);
 const resolveNs = promisify(dns.resolveNs);
 const resolve4 = promisify(dns.resolve4);
-
-// Curl requests rate limiter
-const curlLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 60, // limit each IP to 60 curl requests per minute
-  message: 'Rate limit exceeded for curl requests\n',
-  standardHeaders: false, // Don't send headers for curl requests
-  legacyHeaders: false,
-  handler: (req, res) => {
-    res.type('text/plain').status(429).send('Rate limit exceeded. Please try again later.\n');
-  }
-});
 
 // Helper function to determine if request is from cURL
 function isCurlRequest(userAgent: string): boolean {
@@ -43,6 +30,20 @@ function getIpAddress(req: Request): string {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Root route - handles curl requests WITHOUT rate limiting for better performance
+  app.get('/', (req: Request, res: Response, next: any) => {
+    const userAgent = req.headers['user-agent'] || '';
+    
+    if (isCurlRequest(userAgent)) {
+      const ipAddress = getIpAddress(req);
+      // Temiz IP adresi döndür, yüzde işareti olmadan ve satır sonu ekleyerek
+      return res.type('text/plain').send(ipAddress.replace(/%.*$/, '') + '\n');
+    }
+    
+    // For browser requests, pass to the next middleware (vite)
+    next();
+  });
+
   // Basic route for IP information
   app.get('/api/ip', async (req: Request, res: Response) => {
     try {
@@ -77,20 +78,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error fetching IP info:', error);
       res.status(500).json({ error: 'Failed to fetch IP information' });
     }
-  });
-
-  // Root route - handles curl requests with rate limiting
-  app.get('/', curlLimiter, (req: Request, res: Response, next: any) => {
-    const userAgent = req.headers['user-agent'] || '';
-    
-    if (isCurlRequest(userAgent)) {
-      const ipAddress = getIpAddress(req);
-      // Temiz IP adresi döndür, yüzde işareti olmadan ve satır sonu ekleyerek
-      return res.type('text/plain').send(ipAddress.replace(/%.*$/, '') + '\n');
-    }
-    
-    // For browser requests, pass to the next middleware (vite)
-    next();
   });
 
   // DNS lookup route
