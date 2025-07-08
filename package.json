@@ -1,12 +1,12 @@
 {
-  "name": "rest-express",
+  "name": "iknowmyip",
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
-    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
-    "build:worker": "vite build --outDir=dist && esbuild src/worker.ts --platform=browser --format=esm --bundle --outdir=dist --target=es2022",
+    "build": "vite build",
+    "build:worker": "vite build --outDir=dist/static && wrangler deploy --dry-run",
     "deploy": "wrangler deploy",
     "dev:worker": "wrangler dev",
     "start": "NODE_ENV=production node dist/index.js",
@@ -83,6 +83,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250115.0",
     "@replit/vite-plugin-cartographer": "^0.0.11",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
     "@tailwindcss/typography": "^0.5.15",
@@ -98,15 +99,13 @@
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.30.4",
-    "esbuild": "^0.25.0",
+    "hono": "^4.6.3",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.1",
     "typescript": "5.6.3",
     "vite": "^5.4.14",
-    "wrangler": "^3.99.0",
-    "hono": "^4.6.3",
-    "@cloudflare/workers-types": "^4.20250115.0"
+    "wrangler": "^3.99.0"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"

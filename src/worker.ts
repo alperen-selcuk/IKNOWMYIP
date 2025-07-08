@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
-const app = new Hono();
+const app = new Hono<{ Bindings: { ASSETS: Fetcher } }>();
 
 // CORS middleware
 app.use('*', cors({
@@ -35,8 +35,13 @@ app.get('/', async (c) => {
     });
   }
   
-  // For browser requests, serve the React app
-  return c.html(`<!DOCTYPE html>
+  // For browser requests, serve the static index.html
+  try {
+    const response = await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
+    return response;
+  } catch (error) {
+    // Fallback HTML if assets aren't available
+    return c.html(`<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -252,5 +257,22 @@ async function checkPortOpen(ipAddress: string, port: number): Promise<boolean> 
     return false;
   }
 }
+
+// Serve static assets
+app.get('/*', async (c) => {
+  try {
+    const url = new URL(c.req.url);
+    const assetResponse = await c.env.ASSETS.fetch(new Request(`https://assets${url.pathname}`));
+    
+    if (assetResponse.status === 404) {
+      // If asset not found, serve index.html (SPA fallback)
+      return await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
+    }
+    
+    return assetResponse;
+  } catch (error) {
+    return c.text('Asset not found', 404);
+  }
+});
 
 export default app;
