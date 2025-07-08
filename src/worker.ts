@@ -1,7 +1,11 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
-const app = new Hono<{ Bindings: { ASSETS: Fetcher } }>();
+type Env = {
+  ASSETS: any;
+};
+
+const app = new Hono<{ Bindings: Env }>();
 
 // CORS middleware
 app.use('*', cors({
@@ -59,9 +63,10 @@ app.get('/', async (c) => {
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/assets/index.js"></script>
   </body>
 </html>`);
+  }
 });
 
 // API route for IP information
