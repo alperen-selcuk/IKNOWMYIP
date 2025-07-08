@@ -1,0 +1,32 @@
+name = "iknowmyip"
+main = "dist/worker.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production]
+name = "iknowmyip"
+routes = [
+  { pattern = "iknowmyip.com/*", custom_domain = true },
+  { pattern = "www.iknowmyip.com/*", custom_domain = true }
+]
+
+[env.dev]
+name = "iknowmyip-dev"
+
+# Enable Node.js APIs
+node_compat = true
+
+# Variables
+[vars]
+ENVIRONMENT = "production"
+
+# Build configuration
+[build]
+command = "npm run build:worker"
+cwd = "."
+watch_dir = ["src", "client/src"]
+
+# Assets for static file serving
+[assets]
+directory = "dist"
+binding = "ASSETS"

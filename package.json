@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build:worker": "vite build --outDir=dist && esbuild src/worker.ts --platform=browser --format=esm --bundle --outdir=dist --target=es2022",
+    "deploy": "wrangler deploy",
+    "dev:worker": "wrangler dev",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push"
@@ -100,7 +103,10 @@
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.1",
     "typescript": "5.6.3",
-    "vite": "^5.4.14"
+    "vite": "^5.4.14",
+    "wrangler": "^3.99.0",
+    "hono": "^4.6.3",
+    "@cloudflare/workers-types": "^4.20250115.0"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
