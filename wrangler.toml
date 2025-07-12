@@ -15,5 +15,5 @@ ENVIRONMENT = "production"
 
 # Static assets
 [assets]
-directory = "dist/static"
+directory = "dist/public"
 binding = "ASSETS"
