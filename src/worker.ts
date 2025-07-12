@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
-const app = new Hono<{ Bindings: { ASSETS: Fetcher } }>();
+const app = new Hono<{ Bindings: { ASSETS: any } }>();
 
 // CORS middleware
 app.use('*', cors({
@@ -21,13 +21,17 @@ function getClientIP(request: Request): string {
 
 // Helper function to detect cURL requests
 function isCurlRequest(userAgent: string): boolean {
-  return userAgent.toLowerCase().includes('curl');
+  const ua = userAgent.toLowerCase();
+  return ua.includes('curl') || ua.startsWith('curl/') || ua.includes('wget') || ua.includes('httpie');
 }
 
 // Root route - handles curl requests
 app.get('/', async (c) => {
   const userAgent = c.req.header('user-agent') || '';
   const clientIP = getClientIP(c.req.raw);
+  
+  console.log('Root route - User-Agent:', userAgent);
+  console.log('Root route - Client IP:', clientIP);
   
   if (isCurlRequest(userAgent)) {
     return c.text(clientIP + '\n', 200, {
@@ -62,6 +66,7 @@ app.get('/', async (c) => {
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>`);
+  }
 });
 
 // API route for IP information
@@ -264,15 +269,15 @@ app.get('/*', async (c) => {
     const url = new URL(c.req.url);
     const assetResponse = await c.env.ASSETS.fetch(new Request(`https://assets${url.pathname}`));
     
-    if (assetResponse.status === 404) {
-      // If asset not found, serve index.html (SPA fallback)
-      return await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
+    if (assetResponse.ok) {
+      return assetResponse;
     }
-    
-    return assetResponse;
   } catch (error) {
-    return c.text('Asset not found', 404);
+    console.error('Error serving static asset:', error);
   }
+  
+  // Return 404 if asset not found
+  return c.text('Not Found', 404);
 });
 
 export default app;
