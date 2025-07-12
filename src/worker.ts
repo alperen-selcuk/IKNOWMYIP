@@ -25,7 +25,7 @@ function isCurlRequest(userAgent: string): boolean {
   return ua.includes('curl') || ua.startsWith('curl/') || ua.includes('wget') || ua.includes('httpie');
 }
 
-// Root route - handles curl requests
+// Root route - handles curl requests (must come before static assets)
 app.get('/', async (c) => {
   const userAgent = c.req.header('user-agent') || '';
   const clientIP = getClientIP(c.req.raw);
@@ -63,7 +63,8 @@ app.get('/', async (c) => {
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/assets/index-nqet4VLz.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-cKtbz_UX.css">
   </body>
 </html>`);
   }
@@ -263,7 +264,7 @@ async function checkPortOpen(ipAddress: string, port: number): Promise<boolean> 
   }
 }
 
-// Serve static assets
+// Serve static assets (must come AFTER the root route)
 app.get('/*', async (c) => {
   try {
     const url = new URL(c.req.url);
