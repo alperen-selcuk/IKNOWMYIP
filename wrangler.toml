@@ -16,7 +16,4 @@ name = "iknowmyip-dev"
 [vars]
 ENVIRONMENT = "production"
 
-# Static assets
-[assets]
-directory = "dist/static"
-binding = "ASSETS"
+# Static assets handled by worker code instead of assets binding

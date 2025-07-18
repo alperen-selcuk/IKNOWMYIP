@@ -72,8 +72,7 @@ app.get('/', async (c) => {
   // Check for both User-Agent and Accept header
   const isCurlOrTextRequest = isCurlRequest(userAgent) || 
                               accept.includes('text/plain') ||
-                              !accept.includes('text/html') ||
-                              accept === '*/*';
+                              (!accept.includes('text/html') && accept === '*/*');
   
   if (isCurlOrTextRequest && !accept.includes('text/html')) {
     console.log('Returning IP for curl/text request');
@@ -86,14 +85,8 @@ app.get('/', async (c) => {
   }
   
   console.log('Returning HTML for browser request');
-  // For browser requests, serve the static index.html
-  try {
-    const response = await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
-    return response;
-  } catch (error) {
-    console.log('Fallback HTML');
-    // Fallback HTML if assets aren't available
-    return c.html(`<!DOCTYPE html>
+  // For browser requests, return embedded HTML
+  return c.html(`<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -115,7 +108,6 @@ app.get('/', async (c) => {
     <link rel="stylesheet" crossorigin href="/assets/index-cKtbz_UX.css">
   </body>
 </html>`);
-  }
 });
 
 // API route for IP information
@@ -315,20 +307,28 @@ async function checkPortOpen(ipAddress: string, port: number): Promise<boolean> 
   }
 }
 
-// Serve static assets (must come AFTER the root route)
+// Serve static assets from build directory
 app.get('/*', async (c) => {
-  try {
-    const url = new URL(c.req.url);
-    const assetResponse = await c.env.ASSETS.fetch(new Request(`https://assets${url.pathname}`));
+  const url = new URL(c.req.url);
+  const pathname = url.pathname;
+  
+  // Handle common static file requests
+  if (pathname.startsWith('/assets/') || 
+      pathname === '/favicon.png' || 
+      pathname === '/sitemap.xml') {
     
-    if (assetResponse.ok) {
-      return assetResponse;
+    try {
+      // Try to fetch from built assets (this will need to be adapted based on your setup)
+      const response = await fetch(`https://iknowmyip.com${pathname}`);
+      if (response.ok) {
+        return response;
+      }
+    } catch (error) {
+      console.error('Error serving static asset:', error);
     }
-  } catch (error) {
-    console.error('Error serving static asset:', error);
   }
   
-  // Return 404 if asset not found
+  // Return 404 for unknown routes
   return c.text('Not Found', 404);
 });
 
