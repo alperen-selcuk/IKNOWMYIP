@@ -28,29 +28,35 @@ function isCurlRequest(userAgent: string): boolean {
   return ua.includes('curl') || ua.includes('wget') || ua.includes('httpie');
 }
 
-// Function to handle curl requests (reused for both root and www routes)
-function handleCurlRequest(c: any, userAgent: string): Response | null {
+// GLOBAL MIDDLEWARE - MUST BE BEFORE ROUTES - handles curl requests for ALL paths
+app.use('*', async (c, next) => {
+  const userAgent = c.req.header('user-agent') || '';
+  const url = new URL(c.req.url);
+  
+  // Skip API routes - let them handle curl requests themselves
+  if (url.pathname.startsWith('/api/')) {
+    await next();
+    return;
+  }
+  
+  // Handle curl requests for ANY non-API path (including root, www, etc.)
   if (isCurlRequest(userAgent)) {
     const clientIP = getClientIP(c.req.raw);
-    console.log('Returning IP for curl request:', clientIP);
+    console.log(`Curl request to ${url.pathname} - returning IP: ${clientIP}`);
     return c.text(clientIP + '\n', 200, {
       'Content-Type': 'text/plain',
       'Cache-Control': 'no-store, no-cache'
     });
   }
-  return null;
-}
+  
+  // For non-curl requests, continue to next middleware/route
+  await next();
+});
 
 // Root route - handles requests to main domain (iknowmyip.com)
 app.get('/', async (c) => {
-  const userAgent = c.req.header('user-agent') || '';
-  console.log('Root route hit - User-Agent:', userAgent);
+  console.log('Root route hit for browser request');
   
-  // Check for curl request first
-  const curlResponse = handleCurlRequest(c, userAgent);
-  if (curlResponse) return curlResponse;
-  
-  console.log('Returning HTML for browser request');
   // For browser requests, serve the static index.html
   try {
     const response = await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
@@ -276,25 +282,6 @@ async function checkPortOpen(ipAddress: string, port: number): Promise<boolean> 
     return false;
   }
 }
-
-// Middleware to handle all requests and check for curl
-app.use('*', async (c, next) => {
-  const userAgent = c.req.header('user-agent') || '';
-  const url = new URL(c.req.url);
-  
-  // Handle curl requests for ANY path
-  if (isCurlRequest(userAgent)) {
-    const clientIP = getClientIP(c.req.raw);
-    console.log(`Curl request to ${url.pathname} - returning IP: ${clientIP}`);
-    return c.text(clientIP + '\n', 200, {
-      'Content-Type': 'text/plain',
-      'Cache-Control': 'no-store, no-cache'
-    });
-  }
-  
-  // For non-curl requests, continue to next middleware
-  await next();
-});
 
 // Serve static assets
 app.get('/*', async (c) => {
