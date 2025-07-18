@@ -28,4 +28,5 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/static"),
     emptyOutDir: true,
   },
+  publicDir: path.resolve(import.meta.dirname, "client/public"),
 });

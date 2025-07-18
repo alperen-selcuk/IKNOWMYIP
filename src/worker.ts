@@ -19,11 +19,22 @@ function getClientIP(request: Request): string {
   return cfConnectingIP || xForwardedFor?.split(',')[0] || xRealIP || '127.0.0.1';
 }
 
-// Helper function to detect cURL requests
+// Helper function to detect cURL requests - more aggressive detection
 function isCurlRequest(userAgent: string): boolean {
+  if (!userAgent) return false;
+  
   const ua = userAgent.toLowerCase();
   console.log('Checking User-Agent:', userAgent, 'Lowercase:', ua);
-  const isCurl = ua.includes('curl') || ua.startsWith('curl/') || ua.includes('wget') || ua.includes('httpie');
+  
+  // More comprehensive curl detection
+  const isCurl = ua.includes('curl') || 
+                 ua.startsWith('curl/') || 
+                 ua.includes('wget') || 
+                 ua.includes('httpie') ||
+                 ua.includes('axios') ||
+                 ua.includes('fetch') ||
+                 !ua.includes('mozilla') && !ua.includes('webkit') && !ua.includes('gecko');
+                 
   console.log('Is curl request?', isCurl);
   return isCurl;
 }

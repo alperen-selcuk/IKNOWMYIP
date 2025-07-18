@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "include": [
+    "/*"
+  ],
+  "exclude": [
+    "/assets/*",
+    "/favicon.png",
+    "/sitemap.xml",
+    "/*.css",
+    "/*.js",
+    "/*.map"
+  ]
+}
