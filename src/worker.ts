@@ -107,7 +107,7 @@ app.get('/', async (c) => {
     
     <!-- Additional metadata -->
     <meta name="theme-color" content="#7c3aed" />
-    <script type="module" crossorigin src="/assets/index-nqet4VLz.js"></script>
+    <script type="module" crossorigin src="/assets/index-DAam6PXI.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-cKtbz_UX.css">
   </head>
   <body>
