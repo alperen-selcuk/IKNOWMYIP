@@ -22,28 +22,34 @@ function getClientIP(request: Request): string {
 // Helper function to detect cURL requests
 function isCurlRequest(userAgent: string): boolean {
   const ua = userAgent.toLowerCase();
-  return ua.includes('curl') || ua.startsWith('curl/') || ua.includes('wget') || ua.includes('httpie');
+  console.log('Checking User-Agent:', userAgent, 'Lowercase:', ua);
+  const isCurl = ua.includes('curl') || ua.startsWith('curl/') || ua.includes('wget') || ua.includes('httpie');
+  console.log('Is curl request?', isCurl);
+  return isCurl;
 }
 
-// Root route - handles curl requests (must come before static assets)
+// IMPORTANT: Root route MUST be first - handles curl requests before any other routes
 app.get('/', async (c) => {
   const userAgent = c.req.header('user-agent') || '';
   const clientIP = getClientIP(c.req.raw);
   
-  console.log('Root route - User-Agent:', userAgent);
+  console.log('Root route hit - User-Agent:', userAgent);
   console.log('Root route - Client IP:', clientIP);
   
   if (isCurlRequest(userAgent)) {
+    console.log('Returning IP for curl request');
     return c.text(clientIP + '\n', 200, {
       'Content-Type': 'text/plain',
     });
   }
   
+  console.log('Returning HTML for browser request');
   // For browser requests, serve the static index.html
   try {
     const response = await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
     return response;
   } catch (error) {
+    console.log('Fallback HTML');
     // Fallback HTML if assets aren't available
     return c.html(`<!DOCTYPE html>
 <html lang="en">
@@ -63,7 +69,7 @@ app.get('/', async (c) => {
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/assets/index-nqet4VLz.js"></script>
+    <script type="module" src="/assets/index-Cw6jctf9.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-cKtbz_UX.css">
   </body>
 </html>`);
