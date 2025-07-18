@@ -19,41 +19,27 @@ function getClientIP(request: Request): string {
   return cfConnectingIP || xForwardedFor?.split(',')[0] || xRealIP || '127.0.0.1';
 }
 
-// Helper function to detect cURL requests with improved detection
-function isCurlRequest(request: Request): boolean {
-  const userAgent = request.headers.get('user-agent') || '';
-  const acceptHeader = request.headers.get('accept') || '';
-  
-  // More comprehensive check for curl and similar command-line tools
-  const isCurl = userAgent.toLowerCase().includes('curl') || 
-                userAgent.toLowerCase().startsWith('curl/') || 
-                userAgent.toLowerCase().includes('wget') || 
-                userAgent.toLowerCase().includes('httpie') ||
-                // curl often doesn't specify Accept header or has specific patterns
-                (acceptHeader === '*/*' && !userAgent.includes('Mozilla')) ||
-                // Additional check for curl's typical accept header pattern
-                (acceptHeader.includes('*/*') && !acceptHeader.includes('text/html'));
-                
-  console.log('Request headers:', JSON.stringify({
-    'user-agent': userAgent,
-    'accept': acceptHeader
-  }));
+// Helper function to detect cURL requests
+function isCurlRequest(userAgent: string): boolean {
+  const ua = userAgent.toLowerCase();
+  console.log('Checking User-Agent:', userAgent, 'Lowercase:', ua);
+  const isCurl = ua.includes('curl') || ua.startsWith('curl/') || ua.includes('wget') || ua.includes('httpie');
   console.log('Is curl request?', isCurl);
-  
   return isCurl;
 }
 
 // IMPORTANT: Root route MUST be first - handles curl requests before any other routes
 app.get('/', async (c) => {
+  const userAgent = c.req.header('user-agent') || '';
   const clientIP = getClientIP(c.req.raw);
   
-  // Check if it's a curl request
-  if (isCurlRequest(c.req.raw)) {
+  console.log('Root route hit - User-Agent:', userAgent);
+  console.log('Root route - Client IP:', clientIP);
+  
+  if (isCurlRequest(userAgent)) {
     console.log('Returning IP for curl request');
-    // Return just the IP address in plain text format with a newline
     return c.text(clientIP + '\n', 200, {
       'Content-Type': 'text/plain',
-      'Cache-Control': 'no-store, max-age=0'
     });
   }
   
@@ -90,16 +76,16 @@ app.get('/', async (c) => {
   }
 });
 
-// API route for IP information - update to use the same curl detection logic
+// API route for IP information
 app.get('/api/ip', async (c) => {
   try {
     const clientIP = getClientIP(c.req.raw);
+    const userAgent = c.req.header('user-agent') || '';
     
     // If the request is from cURL, return only the IP address as plain text
-    if (isCurlRequest(c.req.raw)) {
+    if (isCurlRequest(userAgent)) {
       return c.text(clientIP + '\n', 200, {
         'Content-Type': 'text/plain',
-        'Cache-Control': 'no-store, max-age=0'
       });
     }
     
@@ -111,7 +97,7 @@ app.get('/api/ip', async (c) => {
       return c.json({
         ip: clientIP,
         info: ipData,
-        userAgent: c.req.header('user-agent') || '',
+        userAgent,
         datetime: new Date().toISOString()
       });
     } catch (error) {
@@ -124,7 +110,7 @@ app.get('/api/ip', async (c) => {
           country: 'Unknown',
           org: 'Unknown'
         },
-        userAgent: c.req.header('user-agent') || '',
+        userAgent,
         datetime: new Date().toISOString()
       });
     }
