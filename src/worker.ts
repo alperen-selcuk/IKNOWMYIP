@@ -40,6 +40,9 @@ app.get('/', async (c) => {
     console.log('Returning IP for curl request');
     return c.text(clientIP + '\n', 200, {
       'Content-Type': 'text/plain',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
     });
   }
   
@@ -86,6 +89,9 @@ app.get('/api/ip', async (c) => {
     if (isCurlRequest(userAgent)) {
       return c.text(clientIP + '\n', 200, {
         'Content-Type': 'text/plain',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       });
     }
     
