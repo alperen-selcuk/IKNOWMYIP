@@ -39,16 +39,44 @@ function isCurlRequest(userAgent: string): boolean {
   return isCurl;
 }
 
+// Text-only IP endpoint - guaranteed to work
+app.get('/txt', async (c) => {
+  const clientIP = getClientIP(c.req.raw);
+  return c.text(clientIP + '\n', 200, {
+    'Content-Type': 'text/plain',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  });
+});
+
+// Raw IP endpoint - alternative
+app.get('/raw', async (c) => {
+  const clientIP = getClientIP(c.req.raw);
+  return c.text(clientIP, 200, {
+    'Content-Type': 'text/plain',
+    'Cache-Control': 'no-cache, no-store, must-revalidate'
+  });
+});
+
 // IMPORTANT: Root route MUST be first - handles curl requests before any other routes
 app.get('/', async (c) => {
   const userAgent = c.req.header('user-agent') || '';
+  const accept = c.req.header('accept') || '';
   const clientIP = getClientIP(c.req.raw);
   
   console.log('Root route hit - User-Agent:', userAgent);
+  console.log('Root route - Accept:', accept);
   console.log('Root route - Client IP:', clientIP);
   
-  if (isCurlRequest(userAgent)) {
-    console.log('Returning IP for curl request');
+  // Check for both User-Agent and Accept header
+  const isCurlOrTextRequest = isCurlRequest(userAgent) || 
+                              accept.includes('text/plain') ||
+                              !accept.includes('text/html') ||
+                              accept === '*/*';
+  
+  if (isCurlOrTextRequest && !accept.includes('text/html')) {
+    console.log('Returning IP for curl/text request');
     return c.text(clientIP + '\n', 200, {
       'Content-Type': 'text/plain',
       'Cache-Control': 'no-cache, no-store, must-revalidate',
