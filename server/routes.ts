@@ -14,8 +14,7 @@ const resolveNs = promisify(dns.resolveNs);
 const resolve4 = promisify(dns.resolve4);
 
 // Helper function to determine if request is from cURL
-function isCurlRequest(req: Request): boolean {
-  const userAgent = req.headers['user-agent'] || '';
+function isCurlRequest(userAgent: string): boolean {
   return userAgent.toLowerCase().includes('curl');
 }
 
@@ -31,20 +30,6 @@ function getIpAddress(req: Request): string {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Root route - MUST BE FIRST - handles curl requests, browser requests pass through
-  app.use((req: Request, res: Response, next: any) => {
-    // Only handle GET requests to the root path
-    if (req.method === 'GET' && (req.path === '/' || req.path === '')) {
-      if (isCurlRequest(req)) {
-        const ipAddress = getIpAddress(req);
-        // Return clean IP address without percent signs and with newline
-        return res.type('text/plain').send(ipAddress.replace(/%.*$/, '') + '\n');
-      }
-    }
-    // For all other requests or browser requests, continue to next middleware
-    next();
-  });
-
   // Basic route for IP information
   app.get('/api/ip', async (req: Request, res: Response) => {
     try {
@@ -53,7 +38,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If the request is from cURL, return only the IP address as plain text
       // with a newline at the end to avoid the % character issue
-      if (isCurlRequest(req)) {
+      if (isCurlRequest(userAgent)) {
         return res.type('text/plain').send(ipAddress.replace(/%.*$/, '') + '\n');
       }
       
@@ -79,6 +64,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error fetching IP info:', error);
       res.status(500).json({ error: 'Failed to fetch IP information' });
     }
+  });
+
+  // Root route - handles curl requests, browser requests are handled by vite middleware
+  app.get('/', (req: Request, res: Response, next: any) => {
+    const userAgent = req.headers['user-agent'] || '';
+    
+    if (isCurlRequest(userAgent)) {
+      const ipAddress = getIpAddress(req);
+      // Temiz IP adresi döndür, yüzde işareti olmadan ve satır sonu ekleyerek
+      return res.type('text/plain').send(ipAddress.replace(/%.*$/, '') + '\n');
+    }
+    
+    // For browser requests, pass to the next middleware (vite)
+    next();
   });
 
   // DNS lookup route

@@ -19,13 +19,13 @@ function getClientIP(request: Request): string {
   return cfConnectingIP || xForwardedFor?.split(',')[0] || xRealIP || '127.0.0.1';
 }
 
-// Helper function to detect cURL requests
+// Helper function to detect cURL requests - improved version
 function isCurlRequest(userAgent: string): boolean {
+  if (!userAgent) return false;
+  
   const ua = userAgent.toLowerCase();
-  console.log('Checking User-Agent:', userAgent, 'Lowercase:', ua);
-  const isCurl = ua.includes('curl') || ua.startsWith('curl/') || ua.includes('wget') || ua.includes('httpie');
-  console.log('Is curl request?', isCurl);
-  return isCurl;
+  // Check for common command-line tools
+  return ua.includes('curl') || ua.includes('wget') || ua.includes('httpie');
 }
 
 // IMPORTANT: Root route MUST be first - handles curl requests before any other routes
@@ -36,10 +36,12 @@ app.get('/', async (c) => {
   console.log('Root route hit - User-Agent:', userAgent);
   console.log('Root route - Client IP:', clientIP);
   
+  // Check if it's a curl request and return IP only
   if (isCurlRequest(userAgent)) {
     console.log('Returning IP for curl request');
     return c.text(clientIP + '\n', 200, {
       'Content-Type': 'text/plain',
+      'Cache-Control': 'no-store, no-cache'
     });
   }
   
