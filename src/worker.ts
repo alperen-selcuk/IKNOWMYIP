@@ -19,21 +19,20 @@ function getClientIP(request: Request): string {
   return cfConnectingIP || xForwardedFor?.split(',')[0] || xRealIP || '127.0.0.1';
 }
 
-// Helper function to detect cURL requests - more aggressive detection
+// Helper function to detect cURL requests - more precise detection
 function isCurlRequest(userAgent: string): boolean {
   if (!userAgent) return false;
   
   const ua = userAgent.toLowerCase();
   console.log('Checking User-Agent:', userAgent, 'Lowercase:', ua);
   
-  // More comprehensive curl detection
-  const isCurl = ua.includes('curl') || 
-                 ua.startsWith('curl/') || 
-                 ua.includes('wget') || 
-                 ua.includes('httpie') ||
-                 ua.includes('axios') ||
-                 ua.includes('fetch') ||
-                 !ua.includes('mozilla') && !ua.includes('webkit') && !ua.includes('gecko');
+  // More precise curl detection - only match actual curl/wget/httpie tools
+  const isCurl = ua.startsWith('curl/') || 
+                 ua === 'curl' ||
+                 ua.startsWith('wget/') ||
+                 ua === 'wget' ||
+                 ua.startsWith('httpie/') ||
+                 ua === 'httpie';
                  
   console.log('Is curl request?', isCurl);
   return isCurl;
@@ -69,12 +68,8 @@ app.get('/', async (c) => {
   console.log('Root route - Accept:', accept);
   console.log('Root route - Client IP:', clientIP);
   
-  // Check for both User-Agent and Accept header
-  const isCurlOrTextRequest = isCurlRequest(userAgent) || 
-                              accept.includes('text/plain') ||
-                              (!accept.includes('text/html') && accept === '*/*');
-  
-  if (isCurlOrTextRequest && !accept.includes('text/html')) {
+  // Only return text for explicit curl requests or text/plain requests
+  if (isCurlRequest(userAgent) || accept === 'text/plain') {
     console.log('Returning IP for curl/text request');
     return c.text(clientIP + '\n', 200, {
       'Content-Type': 'text/plain',
