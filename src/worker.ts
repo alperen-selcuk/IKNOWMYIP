@@ -323,19 +323,12 @@ app.get('/*', async (c) => {
       pathname === '/favicon.png' || 
       pathname === '/sitemap.xml') {
     
-    try {
-      // Try to fetch from built assets (this will need to be adapted based on your setup)
-      const response = await fetch(`https://iknowmyip.com${pathname}`);
-      if (response.ok) {
-        return response;
-      }
-    } catch (error) {
-      console.error('Error serving static asset:', error);
-    }
+    // Return 404 for static assets - they should be handled by Cloudflare Workers Sites
+    return c.text('Static asset not found', 404);
   }
   
-  // Return 404 for unknown routes
-  return c.text('Not Found', 404);
+  // For any other routes, redirect to home page (SPA behavior)
+  return c.redirect('/');
 });
 
 export default app;

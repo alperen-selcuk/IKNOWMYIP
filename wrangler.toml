@@ -17,3 +17,7 @@ name = "iknowmyip-dev"
 ENVIRONMENT = "production"
 
 # Static assets handled by worker code instead of assets binding
+
+# Static assets configuration
+[site]
+bucket = "./dist"
