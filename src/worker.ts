@@ -58,6 +58,17 @@ app.get('/', async (c) => {
   const userAgent = c.req.header('user-agent') || '';
   console.log('Root route - User Agent:', userAgent);
   
+  // FORCE RETURN IP FOR ANY REQUEST - FOR TESTING
+  const clientIP = getClientIP(c.req.raw);
+  console.log(`ALWAYS returning IP: ${clientIP}`);
+  return new Response(clientIP + '\n', {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+    }
+  });
+  
   // Simplified curl detection - check if user agent contains 'curl'
   if (userAgent.toLowerCase().includes('curl')) {
     const clientIP = getClientIP(c.req.raw);
