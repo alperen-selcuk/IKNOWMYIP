@@ -36,6 +36,18 @@ app.use('*', async (c, next) => {
 
 // Root route - handles requests to main domain (iknowmyip.com)
 app.get('/', async (c) => {
+  const userAgent = c.req.header('user-agent') || '';
+  
+  // If the request is from cURL, return only the IP address as plain text
+  if (isCurlRequest(userAgent)) {
+    const clientIP = getClientIP(c.req.raw);
+    console.log(`Curl request to root - returning IP: ${clientIP}`);
+    return c.text(clientIP + '\n', 200, {
+      'Content-Type': 'text/plain',
+      'Cache-Control': 'no-store, no-cache'
+    });
+  }
+  
   console.log('Root route hit for browser request');
   
   // For browser requests, serve the static index.html
@@ -282,15 +294,20 @@ app.all('/*', async (c) => {
     const url = new URL(c.req.url);
     const assetResponse = await c.env.ASSETS.fetch(new Request(`https://assets${url.pathname}`));
     
-    if (assetResponse.ok) {
+    if (assetResponse.status === 200) {
       return assetResponse;
     }
   } catch (error) {
-    console.error('Error serving static asset:', error);
+    console.log('Asset not found, serving fallback');
   }
-  
-  // Return 404 if asset not found
-  return c.text('Not Found', 404);
+
+  // If asset not found, serve the main app (for SPA routing)
+  try {
+    const response = await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
+    return response;
+  } catch (error) {
+    return new Response('Not Found', { status: 404 });
+  }
 });
 
 export default app;
