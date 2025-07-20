@@ -28,28 +28,9 @@ function isCurlRequest(userAgent: string): boolean {
   return ua.includes('curl') || ua.includes('wget') || ua.includes('httpie');
 }
 
-// GLOBAL MIDDLEWARE - MUST BE BEFORE ROUTES - handles curl requests for ALL paths
+// GLOBAL MIDDLEWARE - MUST BE BEFORE ROUTES
 app.use('*', async (c, next) => {
-  const userAgent = c.req.header('user-agent') || '';
-  const url = new URL(c.req.url);
-  
-  // Skip API routes - let them handle curl requests themselves
-  if (url.pathname.startsWith('/api/')) {
-    await next();
-    return;
-  }
-  
-  // Handle curl requests for ANY non-API path (including root, www, etc.)
-  if (isCurlRequest(userAgent)) {
-    const clientIP = getClientIP(c.req.raw);
-    console.log(`Curl request to ${url.pathname} - returning IP: ${clientIP}`);
-    return c.text(clientIP + '\n', 200, {
-      'Content-Type': 'text/plain',
-      'Cache-Control': 'no-store, no-cache'
-    });
-  }
-  
-  // For non-curl requests, continue to next middleware/route
+  // Only handle CORS and logging, let routes handle curl detection
   await next();
 });
 
@@ -283,15 +264,14 @@ async function checkPortOpen(ipAddress: string, port: number): Promise<boolean> 
   }
 }
 
-// Serve static assets
-app.get('/*', async (c) => {
+// Catch-all route for curl requests and static assets
+app.all('/*', async (c) => {
   const userAgent = c.req.header('user-agent') || '';
   
-  // Handle curl requests for any path that wasn't caught by global middleware
+  // Handle curl requests for any path
   if (isCurlRequest(userAgent)) {
     const clientIP = getClientIP(c.req.raw);
-    const url = new URL(c.req.url);
-    console.log(`Curl request to ${url.pathname} - returning IP: ${clientIP}`);
+    console.log(`Curl request to ${c.req.url} - returning IP: ${clientIP}`);
     return c.text(clientIP + '\n', 200, {
       'Content-Type': 'text/plain',
       'Cache-Control': 'no-store, no-cache'
