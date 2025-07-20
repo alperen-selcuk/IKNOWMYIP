@@ -3,76 +3,24 @@ import { cors } from 'hono/cors';
 
 const app = new Hono<{ Bindings: { ASSETS: any } }>();
 
-// CORS middleware
-app.use('*', cors({
-  origin: ['https://iknowmyip.com', 'https://www.iknowmyip.com'],
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-}));
-
 // Helper function to get client IP
 function getClientIP(request: Request): string {
-  // Cloudflare Workers specific headers
   const cfConnectingIP = request.headers.get('CF-Connecting-IP');
   const cfRealIP = request.headers.get('CF-Real-IP');
   const xForwardedFor = request.headers.get('X-Forwarded-For');
   const xRealIP = request.headers.get('X-Real-IP');
   const remoteAddr = request.headers.get('Remote-Addr');
   
-  console.log('Headers:', {
-    'CF-Connecting-IP': cfConnectingIP,
-    'CF-Real-IP': cfRealIP,
-    'X-Forwarded-For': xForwardedFor,
-    'X-Real-IP': xRealIP,
-    'Remote-Addr': remoteAddr
-  });
-  
   return cfConnectingIP || cfRealIP || xForwardedFor?.split(',')[0]?.trim() || xRealIP || remoteAddr || '127.0.0.1';
 }
 
-// Helper function to detect cURL requests
-function isCurlRequest(userAgent: string): boolean {
-  if (!userAgent) {
-    console.log('No user agent found');
-    return false;
-  }
-  
-  const ua = userAgent.toLowerCase();
-  console.log('User Agent:', userAgent);
-  
-  // Check for common command-line tools
-  const isCurl = ua.includes('curl') || ua.includes('wget') || ua.includes('httpie') || ua.includes('libcurl');
-  console.log('Is curl request:', isCurl);
-  
-  return isCurl;
-}
-
-// GLOBAL MIDDLEWARE - MUST BE BEFORE ROUTES
-app.use('*', async (c, next) => {
-  // Only handle CORS and logging, let routes handle curl detection
-  await next();
-});
-
-// Root route - handles requests to main domain (iknowmyip.com)
+// ROOT ROUTE FIRST - before any middleware
 app.get('/', async (c) => {
   const userAgent = c.req.header('user-agent') || '';
-  console.log('Root route - User Agent:', userAgent);
   
-  // FORCE RETURN IP FOR ANY REQUEST - FOR TESTING
-  const clientIP = getClientIP(c.req.raw);
-  console.log(`ALWAYS returning IP: ${clientIP}`);
-  return new Response(clientIP + '\n', {
-    status: 200,
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'no-store, no-cache, must-revalidate',
-    }
-  });
-  
-  // Simplified curl detection - check if user agent contains 'curl'
+  // Always return IP for curl requests
   if (userAgent.toLowerCase().includes('curl')) {
     const clientIP = getClientIP(c.req.raw);
-    console.log(`Curl detected - returning IP: ${clientIP}`);
     return new Response(clientIP + '\n', {
       status: 200,
       headers: {
@@ -82,14 +30,11 @@ app.get('/', async (c) => {
     });
   }
   
-  console.log('Browser request - serving HTML');
-  
   // For browser requests, serve the static index.html
   try {
     const response = await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
     return response;
   } catch (error) {
-    console.log('Fallback HTML');
     // Fallback HTML if assets aren't available
     return c.html(`<!DOCTYPE html>
 <html lang="en">
@@ -114,6 +59,36 @@ app.get('/', async (c) => {
   </body>
 </html>`);
   }
+});
+
+// CORS middleware - AFTER root route
+app.use('*', cors({
+  origin: ['https://iknowmyip.com', 'https://www.iknowmyip.com'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+}));
+
+// Helper function to detect cURL requests
+function isCurlRequest(userAgent: string): boolean {
+  if (!userAgent) {
+    console.log('No user agent found');
+    return false;
+  }
+  
+  const ua = userAgent.toLowerCase();
+  console.log('User Agent:', userAgent);
+  
+  // Check for common command-line tools
+  const isCurl = ua.includes('curl') || ua.includes('wget') || ua.includes('httpie') || ua.includes('libcurl');
+  console.log('Is curl request:', isCurl);
+  
+  return isCurl;
+}
+
+// GLOBAL MIDDLEWARE - MUST BE BEFORE ROUTES
+app.use('*', async (c, next) => {
+  // Only handle CORS and logging, let routes handle curl detection
+  await next();
 });
 
 // API route for IP information
