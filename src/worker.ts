@@ -12,20 +12,39 @@ app.use('*', cors({
 
 // Helper function to get client IP
 function getClientIP(request: Request): string {
+  // Cloudflare Workers specific headers
   const cfConnectingIP = request.headers.get('CF-Connecting-IP');
+  const cfRealIP = request.headers.get('CF-Real-IP');
   const xForwardedFor = request.headers.get('X-Forwarded-For');
   const xRealIP = request.headers.get('X-Real-IP');
+  const remoteAddr = request.headers.get('Remote-Addr');
   
-  return cfConnectingIP || xForwardedFor?.split(',')[0] || xRealIP || '127.0.0.1';
+  console.log('Headers:', {
+    'CF-Connecting-IP': cfConnectingIP,
+    'CF-Real-IP': cfRealIP,
+    'X-Forwarded-For': xForwardedFor,
+    'X-Real-IP': xRealIP,
+    'Remote-Addr': remoteAddr
+  });
+  
+  return cfConnectingIP || cfRealIP || xForwardedFor?.split(',')[0]?.trim() || xRealIP || remoteAddr || '127.0.0.1';
 }
 
 // Helper function to detect cURL requests
 function isCurlRequest(userAgent: string): boolean {
-  if (!userAgent) return false;
+  if (!userAgent) {
+    console.log('No user agent found');
+    return false;
+  }
   
   const ua = userAgent.toLowerCase();
+  console.log('User Agent:', userAgent);
+  
   // Check for common command-line tools
-  return ua.includes('curl') || ua.includes('wget') || ua.includes('httpie');
+  const isCurl = ua.includes('curl') || ua.includes('wget') || ua.includes('httpie') || ua.includes('libcurl');
+  console.log('Is curl request:', isCurl);
+  
+  return isCurl;
 }
 
 // GLOBAL MIDDLEWARE - MUST BE BEFORE ROUTES
