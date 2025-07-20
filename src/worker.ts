@@ -56,18 +56,22 @@ app.use('*', async (c, next) => {
 // Root route - handles requests to main domain (iknowmyip.com)
 app.get('/', async (c) => {
   const userAgent = c.req.header('user-agent') || '';
+  console.log('Root route - User Agent:', userAgent);
   
-  // If the request is from cURL, return only the IP address as plain text
-  if (isCurlRequest(userAgent)) {
+  // Simplified curl detection - check if user agent contains 'curl'
+  if (userAgent.toLowerCase().includes('curl')) {
     const clientIP = getClientIP(c.req.raw);
-    console.log(`Curl request to root - returning IP: ${clientIP}`);
-    return c.text(clientIP + '\n', 200, {
-      'Content-Type': 'text/plain',
-      'Cache-Control': 'no-store, no-cache'
+    console.log(`Curl detected - returning IP: ${clientIP}`);
+    return new Response(clientIP + '\n', {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+      }
     });
   }
   
-  console.log('Root route hit for browser request');
+  console.log('Browser request - serving HTML');
   
   // For browser requests, serve the static index.html
   try {
@@ -107,10 +111,14 @@ app.get('/api/ip', async (c) => {
     const clientIP = getClientIP(c.req.raw);
     const userAgent = c.req.header('user-agent') || '';
     
-    // If the request is from cURL, return only the IP address as plain text
-    if (isCurlRequest(userAgent)) {
-      return c.text(clientIP + '\n', 200, {
-        'Content-Type': 'text/plain',
+    // Simplified curl detection
+    if (userAgent.toLowerCase().includes('curl')) {
+      return new Response(clientIP + '\n', {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        }
       });
     }
     
@@ -300,12 +308,15 @@ app.all('/*', async (c) => {
   const userAgent = c.req.header('user-agent') || '';
   
   // Handle curl requests for any path
-  if (isCurlRequest(userAgent)) {
+  if (userAgent.toLowerCase().includes('curl')) {
     const clientIP = getClientIP(c.req.raw);
     console.log(`Curl request to ${c.req.url} - returning IP: ${clientIP}`);
-    return c.text(clientIP + '\n', 200, {
-      'Content-Type': 'text/plain',
-      'Cache-Control': 'no-store, no-cache'
+    return new Response(clientIP + '\n', {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+      }
     });
   }
 
