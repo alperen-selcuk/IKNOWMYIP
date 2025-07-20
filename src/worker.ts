@@ -285,6 +285,19 @@ async function checkPortOpen(ipAddress: string, port: number): Promise<boolean> 
 
 // Serve static assets
 app.get('/*', async (c) => {
+  const userAgent = c.req.header('user-agent') || '';
+  
+  // Handle curl requests for any path that wasn't caught by global middleware
+  if (isCurlRequest(userAgent)) {
+    const clientIP = getClientIP(c.req.raw);
+    const url = new URL(c.req.url);
+    console.log(`Curl request to ${url.pathname} - returning IP: ${clientIP}`);
+    return c.text(clientIP + '\n', 200, {
+      'Content-Type': 'text/plain',
+      'Cache-Control': 'no-store, no-cache'
+    });
+  }
+
   try {
     const url = new URL(c.req.url);
     const assetResponse = await c.env.ASSETS.fetch(new Request(`https://assets${url.pathname}`));
