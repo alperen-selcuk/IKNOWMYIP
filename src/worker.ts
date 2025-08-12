@@ -28,13 +28,10 @@ function isCliRequest(headers: Headers): boolean {
   return uaIsCli || (acceptPrefersText && notABrowserFetch);
 }
 
-// ROOT ROUTE: return plain IP for CLI, otherwise serve app
+// ROOT ROUTE FIRST - before any middleware
 app.get('/', async (c) => {
-  const headers = c.req.raw.headers;
-  const accept = (headers.get('accept') || '').toLowerCase();
-  const wantsPlain = accept.includes('text/plain') || c.req.query('format') === 'txt' || c.req.query('plain') !== undefined;
-
-  if (isCliRequest(headers) || wantsPlain) {
+  // Return plain IP for CLI tools
+  if (isCliRequest(c.req.raw.headers)) {
     const clientIP = getClientIP(c.req.raw);
     return new Response(clientIP + '\n', {
       status: 200,
@@ -46,13 +43,28 @@ app.get('/', async (c) => {
     });
   }
   
+  // Allow explicit plain text via query to avoid cache key collisions
+  const urlObj = new URL(c.req.url);
+  const wantsPlain = urlObj.searchParams.has('plain') || urlObj.searchParams.get('format') === 'txt';
+  if (wantsPlain) {
+    const clientIP = getClientIP(c.req.raw);
+    return new Response(clientIP + '\n', {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Vary': 'Accept, User-Agent',
+      }
+    });
+  }
+
   // For browser requests, serve the static index.html
   try {
-    const asset = await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
-    const headers = new Headers(asset.headers);
+    const response = await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
+    const headers = new Headers(response.headers);
     headers.set('Vary', 'Accept, User-Agent');
     headers.set('Cache-Control', 'no-store');
-    return new Response(asset.body, { status: asset.status, headers });
+    return new Response(response.body, { status: response.status, headers });
   } catch (error) {
     // Fallback HTML if assets aren't available
     return c.html(`<!DOCTYPE html>
@@ -83,7 +95,7 @@ app.get('/', async (c) => {
   }
 });
 
-// Dedicated plain IP endpoint
+// Deterministic plain-text IP endpoint
 app.get('/ip', (c) => {
   const clientIP = getClientIP(c.req.raw);
   return new Response(clientIP + '\n', {
@@ -291,6 +303,20 @@ async function checkPortOpen(ipAddress: string, port: number): Promise<boolean> 
 
 // Catch-all route for static assets and SPA fallback
 app.all('/*', async (c) => {
+  // If CLI tools hit any non-API path, return just IP
+  const pathname = new URL(c.req.url).pathname;
+  if (!pathname.startsWith('/api') && isCliRequest(c.req.raw.headers)) {
+    const clientIP = getClientIP(c.req.raw);
+    return new Response(clientIP + '\n', {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Vary': 'Accept, User-Agent',
+      }
+    });
+  }
+
   try {
     const url = new URL(c.req.url);
     const assetResponse = await c.env.ASSETS.fetch(new Request(`https://assets${url.pathname}`));
