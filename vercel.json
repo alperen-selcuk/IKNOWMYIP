@@ -7,20 +7,27 @@
       "config": {
         "distDir": "dist/public"
       }
-    },
-    {
-      "src": "api/index.ts",
-      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
+      "src": "/api/ip",
+      "dest": "/api/ip.ts"
+    },
+    {
+      "src": "/api/dns",
+      "dest": "/api/dns.ts"
+    },
+    {
+      "src": "/",
       "dest": "/api/index.ts"
     },
     {
+      "handle": "filesystem"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/api/index.ts"
+      "dest": "/dist/public/$1"
     }
   ]
 }
