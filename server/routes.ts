@@ -1,5 +1,4 @@
 import type { Express, Request, Response } from "express";
-import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import dns from "dns";
 import { promisify } from "util";
@@ -29,7 +28,7 @@ function getIpAddress(req: Request): string {
   return req.socket.remoteAddress || '127.0.0.1';
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export function registerRoutes(app: Express): void {
   // Basic route for IP information
   app.get('/api/ip', async (req: Request, res: Response) => {
     try {
@@ -254,7 +253,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
       socket.connect(port, host);
     });
   }
-
-  const httpServer = createServer(app);
-  return httpServer;
 }
