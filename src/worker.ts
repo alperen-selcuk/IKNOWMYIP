@@ -128,6 +128,49 @@ app.get('/ip', (c) => {
   });
 });
 
+// Additional plain IP endpoints that definitely won't be cached
+app.get('/plainip', (c) => {
+  const clientIP = getClientIP(c.req.raw);
+  return new Response(clientIP + '\n', {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'X-Worker-Response': 'true'
+    }
+  });
+});
+
+app.get('/myip', (c) => {
+  const clientIP = getClientIP(c.req.raw);
+  return new Response(clientIP + '\n', {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'X-Worker-Response': 'true'
+    }
+  });
+});
+
+app.get('/getip', (c) => {
+  const clientIP = getClientIP(c.req.raw);
+  return new Response(clientIP + '\n', {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'X-Worker-Response': 'true'
+    }
+  });
+});
+
 // CORS middleware
 app.use('*', cors({
   origin: ['https://iknowmyip.com', 'https://www.iknowmyip.com'],
