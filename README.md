@@ -28,11 +28,34 @@ I KNOW MY IP is a lightweight, user-friendly web application designed for quick 
 ### Browser Access
 Simply visit [iknowmyip.com](https://iknowmyip.com) to see your IP information in a user-friendly interface.
 
-### Terminal Access
-To get just your IP address in the terminal:
+### Terminal Access (CLI)
+To get just your IP address in the terminal, use any of these endpoints:
 
 ```bash
-curl iknowmyip.com
+# Primary endpoint (recommended)
+curl iknowmyip.com/ip
+
+# Alternative endpoints
+curl iknowmyip.com/myip
+curl iknowmyip.com/getip
+curl iknowmyip.com/plainip
+```
+
+All endpoints return your IP address as plain text:
+```
+31.145.161.76
+```
+
+### Using with other tools
+```bash
+# Store IP in variable
+MY_IP=$(curl -s iknowmyip.com/ip)
+
+# Use with wget
+wget -qO- iknowmyip.com/ip
+
+# Use with httpie
+http -b iknowmyip.com/ip
 ```
 
 ## 💻 Development

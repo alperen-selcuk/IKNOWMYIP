@@ -18,69 +18,63 @@ function getClientIP(request: Request): string {
 function isCliRequest(headers: Headers): boolean {
   const ua = (headers.get('user-agent') || '').toLowerCase();
   const accept = (headers.get('accept') || '').toLowerCase();
-  const secFetchDest = (headers.get('sec-fetch-dest') || '').toLowerCase();
-  const secFetchMode = (headers.get('sec-fetch-mode') || '').toLowerCase();
 
+  // Çok agresif curl tespiti
   const uaIsCli = ua.includes('curl') || ua.includes('wget') || ua.includes('httpie') || ua.includes('libcurl') || ua.includes('powershell');
-  const acceptPrefersText = (!!accept && (accept === '*/*' || accept.includes('text/plain'))) && !accept.includes('text/html');
-  const notABrowserFetch = (!secFetchDest && !secFetchMode) || secFetchDest === 'empty';
+  const acceptIsCli = accept === '*/*' && !headers.get('sec-fetch-dest') && !headers.get('sec-fetch-mode');
 
-  return uaIsCli || (acceptPrefersText && notABrowserFetch);
+  return uaIsCli || acceptIsCli;
 }
 
-// GLOBAL MIDDLEWARE - Her istekte çalışır
-app.use('*', async (c, next) => {
-  // CLI tools için herhangi bir path'te IP dön
-  if (isCliRequest(c.req.raw.headers)) {
+// ROOT ROUTE - En önce, hiç middleware yok
+app.get('/', async (c) => {
+  const headers = c.req.raw.headers;
+  
+  // Curl tespiti - en sert kontrol
+  if (isCliRequest(headers)) {
     const clientIP = getClientIP(c.req.raw);
     return new Response(clientIP + '\n', {
       status: 200,
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+        'Cache-Control': 'no-cache, no-store, must-revalidate, private',
         'Pragma': 'no-cache',
         'Expires': '0',
-        'Vary': 'Accept, User-Agent',
-        'X-Worker-Response': 'true'  // Debug header
+        'X-Worker-Response': 'true',
+        'X-Debug': 'CLI-DETECTED'
       }
     });
   }
   
-  return next();
-});
-
-// ROOT ROUTE FIRST - before any middleware
-app.get('/', async (c) => {
-  // Allow explicit plain text via query
-  const urlObj = new URL(c.req.url);
-  const wantsPlain = urlObj.searchParams.has('plain') || urlObj.searchParams.get('format') === 'txt';
-  if (wantsPlain) {
+  // Query parameter check
+  const url = new URL(c.req.url);
+  if (url.searchParams.has('plain') || url.searchParams.get('format') === 'txt') {
     const clientIP = getClientIP(c.req.raw);
     return new Response(clientIP + '\n', {
       status: 200,
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+        'Cache-Control': 'no-cache, no-store, must-revalidate, private',
         'Pragma': 'no-cache',
         'Expires': '0',
-        'Vary': 'Accept, User-Agent',
-        'X-Worker-Response': 'true'
+        'X-Worker-Response': 'true',
+        'X-Debug': 'QUERY-PARAM'
       }
     });
   }
 
-  // For browser requests, serve the static index.html
+  // Browser için HTML - ama debug header ile
   try {
     const response = await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
     const headers = new Headers(response.headers);
-    headers.set('Vary', 'Accept, User-Agent');
-    headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    headers.set('X-Worker-Response', 'true');
+    headers.set('X-Debug', 'BROWSER-HTML');
+    headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
     headers.set('Pragma', 'no-cache');
     headers.set('Expires', '0');
-    headers.set('X-Worker-Response', 'true');
     return new Response(response.body, { status: response.status, headers });
   } catch (error) {
-    // Fallback HTML if assets aren't available
+    // Fallback HTML
     return c.html(`<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -103,11 +97,11 @@ app.get('/', async (c) => {
     <link rel="stylesheet" crossorigin href="/assets/index-cKtbz_UX.css">
   </body>
 </html>`, 200, {
-      'Vary': 'Accept, User-Agent',
-      'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+      'X-Worker-Response': 'true',
+      'X-Debug': 'FALLBACK-HTML',
+      'Cache-Control': 'no-cache, no-store, must-revalidate, private',
       'Pragma': 'no-cache',
-      'Expires': '0',
-      'X-Worker-Response': 'true'
+      'Expires': '0'
     });
   }
 });

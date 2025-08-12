@@ -1,10 +1,37 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Terminal, Zap } from "lucide-react";
+import { Terminal, Zap, Copy } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 export default function TerminalUsage() {
   const currentLocation = window.location.origin;
   const { t } = useLanguage();
+  const { toast } = useToast();
+
+  const copyCommand = (command: string) => {
+    navigator.clipboard.writeText(command)
+      .then(() => {
+        toast({
+          title: t('terminal.copied'),
+          description: t('terminal.copy_success'),
+          variant: "default",
+        });
+      })
+      .catch(() => {
+        toast({
+          title: "Error",
+          description: t('terminal.copy_error'),
+          variant: "destructive",
+        });
+      });
+  };
+
+  const commands = [
+    { cmd: `curl ${currentLocation}/ip`, desc: t('terminal.primary') },
+    { cmd: `curl ${currentLocation}/myip`, desc: t('terminal.alternative') },
+    { cmd: `curl ${currentLocation}/getip`, desc: t('terminal.alternative') },
+  ];
 
   return (
     <Card className="overflow-hidden">
@@ -20,15 +47,28 @@ export default function TerminalUsage() {
           {t('terminal.description')}
         </p>
         
-        <div className="bg-gray-800 rounded-md p-4 overflow-x-auto">
-          <code className="text-green-400 font-mono text-sm">curl {currentLocation}</code>
+        <div className="space-y-3">
+          {commands.map((item, index) => (
+            <div key={index} className="bg-gray-800 rounded-md p-4 overflow-x-auto">
+              <div className="flex items-center justify-between">
+                <code className="text-green-400 font-mono text-sm flex-1">{item.cmd}</code>
+                <Button 
+                  onClick={() => copyCommand(item.cmd)} 
+                  size="sm" 
+                  variant="ghost" 
+                  className="ml-2 text-gray-400 hover:text-white hover:bg-gray-700"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-gray-500 text-xs mt-1">{item.desc}</p>
+            </div>
+          ))}
         </div>
         
-        <p className="text-gray-500 text-sm mt-3 flex items-center">
-          <Zap className="h-4 w-4 text-yellow-500 mr-1" />
-          {t('terminal.note')}
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
+        <div className="mt-4 p-3 bg-gray-100 rounded-md">
+          <p className="text-sm text-gray-600 font-mono">
+            {t('terminal.output')}: <span className="text-green-600">31.145.161.76</span>
+          </p>
+        </div>
+        
