@@ -39,5 +39,21 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
+  ],
+  "functions": {
+    "api/index.ts": {
+      "memory": 128
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
+    }
   ]
 }
