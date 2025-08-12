@@ -14,22 +14,37 @@ function getClientIP(request: Request): string {
   return cfConnectingIP || cfRealIP || xForwardedFor?.split(',')[0]?.trim() || xRealIP || remoteAddr || '127.0.0.1';
 }
 
-// ROOT ROUTE FIRST - before any middleware
-app.get('/', async (c) => {
-  const userAgent = c.req.header('user-agent') || '';
-  
-  // Always return IP for curl requests
-  if (userAgent.toLowerCase().includes('curl')) {
+// Helper to detect CLI/terminal requests (curl, wget, etc.)
+function isCliRequest(headers: Headers): boolean {
+  const ua = (headers.get('user-agent') || '').toLowerCase();
+  const accept = (headers.get('accept') || '').toLowerCase();
+  const secFetchDest = (headers.get('sec-fetch-dest') || '').toLowerCase();
+
+  const uaIsCli = ua.includes('curl') || ua.includes('wget') || ua.includes('httpie') || ua.includes('libcurl') || ua.includes('powershell');
+  const acceptPrefersText = (!!accept && (accept === '*/*' || accept.includes('text/plain'))) && !accept.includes('text/html');
+  const notABrowserFetch = !secFetchDest || secFetchDest === 'empty';
+
+  return uaIsCli || (acceptPrefersText && notABrowserFetch);
+}
+
+// EARLY GLOBAL MIDDLEWARE: if CLI, return just IP as text
+app.use('*', async (c, next) => {
+  if (isCliRequest(c.req.raw.headers)) {
     const clientIP = getClientIP(c.req.raw);
     return new Response(clientIP + '\n', {
       status: 200,
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
         'Cache-Control': 'no-store, no-cache, must-revalidate',
-      }
+        'Vary': 'Accept, User-Agent',
+      },
     });
   }
-  
+  return next();
+});
+
+// ROOT ROUTE FIRST - before any middleware
+app.get('/', async (c) => {
   // For browser requests, serve the static index.html
   try {
     const response = await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
@@ -104,6 +119,7 @@ app.get('/api/ip', async (c) => {
         headers: {
           'Content-Type': 'text/plain; charset=utf-8',
           'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Vary': 'Accept, User-Agent',
         }
       });
     }
@@ -291,21 +307,7 @@ async function checkPortOpen(ipAddress: string, port: number): Promise<boolean> 
 
 // Catch-all route for curl requests and static assets
 app.all('/*', async (c) => {
-  const userAgent = c.req.header('user-agent') || '';
-  
-  // Handle curl requests for any path
-  if (userAgent.toLowerCase().includes('curl')) {
-    const clientIP = getClientIP(c.req.raw);
-    console.log(`Curl request to ${c.req.url} - returning IP: ${clientIP}`);
-    return new Response(clientIP + '\n', {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-store, no-cache, must-revalidate',
-      }
-    });
-  }
-
+  // CLI requests are already handled by early middleware
   try {
     const url = new URL(c.req.url);
     const assetResponse = await c.env.ASSETS.fetch(new Request(`https://assets${url.pathname}`));
