@@ -72,3 +72,11 @@ export default function TerminalUsage() {
           </p>
         </div>
         
+        <p className="text-gray-500 text-sm mt-3 flex items-center">
+          <Zap className="h-4 w-4 text-yellow-500 mr-1" />
+          {t('terminal.note')}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
