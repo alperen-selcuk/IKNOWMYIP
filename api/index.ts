@@ -22,27 +22,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.status(200).send(ip + '\n');
       return;
     }
-    
-    // For browsers, serve the static site
-    res.setHeader('Content-Type', 'text/html');
-    res.status(200).send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>I Know My IP</title>
-        </head>
-        <body>
-          <div id="root"></div>
-          <script type="module" src="/static/index.js"></script>
-        </body>
-      </html>
-    `);
-    return;
   }
 
-  res.status(404).json({ error: 'Not Found' });
+  // For all other routes, try to serve the built React app's index.html
+  res.setHeader('Content-Type', 'text/html');
+  res.status(200).send(`
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.png" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>I Know My IP</title>
+        <script type="module" crossorigin src="/assets/index.js"></script>
+        <link rel="stylesheet" crossorigin href="/assets/index.css">
+      </head>
+      <body>
+        <div id="root"></div>
+      </body>
+    </html>
+  `);
 }
 
 function getIpAddress(req: VercelRequest): string {
