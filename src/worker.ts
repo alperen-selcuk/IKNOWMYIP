@@ -49,7 +49,7 @@ app.use('*', async (c, next) => {
   return next();
 });
 
-// ROOT ROUTE
+// ROOT ROUTE FIRST - before any middleware
 app.get('/', async (c) => {
   // Allow explicit plain text via query
   const urlObj = new URL(c.req.url);
@@ -323,28 +323,17 @@ async function checkPortOpen(ipAddress: string, port: number): Promise<boolean> 
 
 // Catch-all route for static assets and SPA fallback
 app.all('/*', async (c) => {
-  // If CLI tools hit any non-API path, return just IP
-  const pathname = new URL(c.req.url).pathname;
-  if (!pathname.startsWith('/api') && isCliRequest(c.req.raw.headers)) {
-    const clientIP = getClientIP(c.req.raw);
-    return new Response(clientIP + '\n', {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-store, no-cache, must-revalidate, private',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'Vary': 'Accept, User-Agent',
-      }
-    });
-  }
-
   try {
     const url = new URL(c.req.url);
     const assetResponse = await c.env.ASSETS.fetch(new Request(`https://assets${url.pathname}`));
     
     if (assetResponse.status === 200) {
-      return assetResponse;
+      const headers = new Headers(assetResponse.headers);
+      headers.set('X-Worker-Response', 'true');
+      return new Response(assetResponse.body, { 
+        status: assetResponse.status, 
+        headers 
+      });
     }
   } catch (error) {
     console.log('Asset not found, serving fallback');
@@ -355,10 +344,19 @@ app.all('/*', async (c) => {
     const asset = await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
     const headers = new Headers(asset.headers);
     headers.set('Vary', 'Accept, User-Agent');
-    headers.set('Cache-Control', 'no-store');
+    headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    headers.set('Pragma', 'no-cache');
+    headers.set('Expires', '0');
+    headers.set('X-Worker-Response', 'true');
     return new Response(asset.body, { status: asset.status, headers });
   } catch (error) {
-    return new Response('Not Found', { status: 404, headers: { 'Vary': 'Accept, User-Agent' } });
+    return new Response('Not Found', { 
+      status: 404, 
+      headers: { 
+        'Vary': 'Accept, User-Agent',
+        'X-Worker-Response': 'true'
+      } 
+    });
   }
 });
 
