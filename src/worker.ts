@@ -28,22 +28,30 @@ function isCliRequest(headers: Headers): boolean {
   return uaIsCli || (acceptPrefersText && notABrowserFetch);
 }
 
-// ROOT ROUTE FIRST - before any middleware
-app.get('/', async (c) => {
-  // Return plain IP for CLI tools
+// GLOBAL MIDDLEWARE - Her istekte çalışır
+app.use('*', async (c, next) => {
+  // CLI tools için herhangi bir path'te IP dön
   if (isCliRequest(c.req.raw.headers)) {
     const clientIP = getClientIP(c.req.raw);
     return new Response(clientIP + '\n', {
       status: 200,
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+        'Pragma': 'no-cache',
+        'Expires': '0',
         'Vary': 'Accept, User-Agent',
+        'X-Worker-Response': 'true'  // Debug header
       }
     });
   }
   
-  // Allow explicit plain text via query to avoid cache key collisions
+  return next();
+});
+
+// ROOT ROUTE
+app.get('/', async (c) => {
+  // Allow explicit plain text via query
   const urlObj = new URL(c.req.url);
   const wantsPlain = urlObj.searchParams.has('plain') || urlObj.searchParams.get('format') === 'txt';
   if (wantsPlain) {
@@ -52,8 +60,11 @@ app.get('/', async (c) => {
       status: 200,
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+        'Pragma': 'no-cache',
+        'Expires': '0',
         'Vary': 'Accept, User-Agent',
+        'X-Worker-Response': 'true'
       }
     });
   }
@@ -63,7 +74,10 @@ app.get('/', async (c) => {
     const response = await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
     const headers = new Headers(response.headers);
     headers.set('Vary', 'Accept, User-Agent');
-    headers.set('Cache-Control', 'no-store');
+    headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    headers.set('Pragma', 'no-cache');
+    headers.set('Expires', '0');
+    headers.set('X-Worker-Response', 'true');
     return new Response(response.body, { status: response.status, headers });
   } catch (error) {
     // Fallback HTML if assets aren't available
@@ -90,7 +104,10 @@ app.get('/', async (c) => {
   </body>
 </html>`, 200, {
       'Vary': 'Accept, User-Agent',
-      'Cache-Control': 'no-store'
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'X-Worker-Response': 'true'
     });
   }
 });
@@ -102,8 +119,11 @@ app.get('/ip', (c) => {
     status: 200,
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+      'Pragma': 'no-cache',
+      'Expires': '0',
       'Vary': 'Accept, User-Agent',
+      'X-Worker-Response': 'true'
     }
   });
 });
@@ -311,7 +331,9 @@ app.all('/*', async (c) => {
       status: 200,
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+        'Pragma': 'no-cache',
+        'Expires': '0',
         'Vary': 'Accept, User-Agent',
       }
     });
