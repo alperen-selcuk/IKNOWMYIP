@@ -19,17 +19,22 @@ function isCliRequest(headers: Headers): boolean {
   const ua = (headers.get('user-agent') || '').toLowerCase();
   const accept = (headers.get('accept') || '').toLowerCase();
   const secFetchDest = (headers.get('sec-fetch-dest') || '').toLowerCase();
+  const secFetchMode = (headers.get('sec-fetch-mode') || '').toLowerCase();
 
   const uaIsCli = ua.includes('curl') || ua.includes('wget') || ua.includes('httpie') || ua.includes('libcurl') || ua.includes('powershell');
   const acceptPrefersText = (!!accept && (accept === '*/*' || accept.includes('text/plain'))) && !accept.includes('text/html');
-  const notABrowserFetch = !secFetchDest || secFetchDest === 'empty';
+  const notABrowserFetch = (!secFetchDest && !secFetchMode) || secFetchDest === 'empty';
 
   return uaIsCli || (acceptPrefersText && notABrowserFetch);
 }
 
-// EARLY GLOBAL MIDDLEWARE: if CLI, return just IP as text
-app.use('*', async (c, next) => {
-  if (isCliRequest(c.req.raw.headers)) {
+// ROOT ROUTE: return plain IP for CLI, otherwise serve app
+app.get('/', async (c) => {
+  const headers = c.req.raw.headers;
+  const accept = (headers.get('accept') || '').toLowerCase();
+  const wantsPlain = accept.includes('text/plain') || c.req.query('format') === 'txt' || c.req.query('plain') !== undefined;
+
+  if (isCliRequest(headers) || wantsPlain) {
     const clientIP = getClientIP(c.req.raw);
     return new Response(clientIP + '\n', {
       status: 200,
@@ -37,18 +42,17 @@ app.use('*', async (c, next) => {
         'Content-Type': 'text/plain; charset=utf-8',
         'Cache-Control': 'no-store, no-cache, must-revalidate',
         'Vary': 'Accept, User-Agent',
-      },
+      }
     });
   }
-  return next();
-});
-
-// ROOT ROUTE FIRST - before any middleware
-app.get('/', async (c) => {
+  
   // For browser requests, serve the static index.html
   try {
-    const response = await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
-    return response;
+    const asset = await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
+    const headers = new Headers(asset.headers);
+    headers.set('Vary', 'Accept, User-Agent');
+    headers.set('Cache-Control', 'no-store');
+    return new Response(asset.body, { status: asset.status, headers });
   } catch (error) {
     // Fallback HTML if assets aren't available
     return c.html(`<!DOCTYPE html>
@@ -72,59 +76,39 @@ app.get('/', async (c) => {
     <script type="module" src="/assets/index-Cw6jctf9.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-cKtbz_UX.css">
   </body>
-</html>`);
+</html>`, 200, {
+      'Vary': 'Accept, User-Agent',
+      'Cache-Control': 'no-store'
+    });
   }
 });
 
-// CORS middleware - AFTER root route
+// Dedicated plain IP endpoint
+app.get('/ip', (c) => {
+  const clientIP = getClientIP(c.req.raw);
+  return new Response(clientIP + '\n', {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Vary': 'Accept, User-Agent',
+    }
+  });
+});
+
+// CORS middleware
 app.use('*', cors({
   origin: ['https://iknowmyip.com', 'https://www.iknowmyip.com'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Helper function to detect cURL requests
-function isCurlRequest(userAgent: string): boolean {
-  if (!userAgent) {
-    console.log('No user agent found');
-    return false;
-  }
-  
-  const ua = userAgent.toLowerCase();
-  console.log('User Agent:', userAgent);
-  
-  // Check for common command-line tools
-  const isCurl = ua.includes('curl') || ua.includes('wget') || ua.includes('httpie') || ua.includes('libcurl');
-  console.log('Is curl request:', isCurl);
-  
-  return isCurl;
-}
-
-// GLOBAL MIDDLEWARE - MUST BE BEFORE ROUTES
-app.use('*', async (c, next) => {
-  // Only handle CORS and logging, let routes handle curl detection
-  await next();
-});
-
-// API route for IP information
+// API route for IP information (always JSON)
 app.get('/api/ip', async (c) => {
   try {
     const clientIP = getClientIP(c.req.raw);
     const userAgent = c.req.header('user-agent') || '';
-    
-    // Simplified curl detection
-    if (userAgent.toLowerCase().includes('curl')) {
-      return new Response(clientIP + '\n', {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
-          'Cache-Control': 'no-store, no-cache, must-revalidate',
-          'Vary': 'Accept, User-Agent',
-        }
-      });
-    }
-    
-    // For browser requests, get detailed IP info
+
     try {
       const ipResponse = await fetch(`https://ipinfo.io/${clientIP}/json`);
       const ipData = await ipResponse.json();
@@ -305,9 +289,8 @@ async function checkPortOpen(ipAddress: string, port: number): Promise<boolean> 
   }
 }
 
-// Catch-all route for curl requests and static assets
+// Catch-all route for static assets and SPA fallback
 app.all('/*', async (c) => {
-  // CLI requests are already handled by early middleware
   try {
     const url = new URL(c.req.url);
     const assetResponse = await c.env.ASSETS.fetch(new Request(`https://assets${url.pathname}`));
@@ -321,10 +304,13 @@ app.all('/*', async (c) => {
 
   // If asset not found, serve the main app (for SPA routing)
   try {
-    const response = await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
-    return response;
+    const asset = await c.env.ASSETS.fetch(new Request('https://assets/index.html'));
+    const headers = new Headers(asset.headers);
+    headers.set('Vary', 'Accept, User-Agent');
+    headers.set('Cache-Control', 'no-store');
+    return new Response(asset.body, { status: asset.status, headers });
   } catch (error) {
-    return new Response('Not Found', { status: 404 });
+    return new Response('Not Found', { status: 404, headers: { 'Vary': 'Accept, User-Agent' } });
   }
 });
 
