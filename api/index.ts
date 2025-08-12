@@ -11,20 +11,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  // Handle root path - return IP for curl, redirect to static site for browsers
-  if (req.url === '/') {
-    const userAgent = req.headers['user-agent'] || '';
-    
-    // If the request is from cURL, return IP address
-    if (userAgent.toLowerCase().includes('curl')) {
-      const ip = getIpAddress(req);
-      res.setHeader('Content-Type', 'text/plain');
-      res.status(200).send(ip + '\n');
-      return;
-    }
+  const userAgent = req.headers['user-agent'] || '';
+  
+  // If the request is from cURL, return IP address
+  if (userAgent.toLowerCase().includes('curl')) {
+    const ip = getIpAddress(req);
+    res.setHeader('Content-Type', 'text/plain');
+    res.status(200).send(ip + '\n');
+    return;
   }
 
-  // For all other routes, try to serve the built React app's index.html
+  // For browser requests, serve the built React app's index.html
   res.setHeader('Content-Type', 'text/html');
   res.status(200).send(`
     <!DOCTYPE html>
