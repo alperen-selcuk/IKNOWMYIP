@@ -17,28 +17,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (userAgent.toLowerCase().includes('curl')) {
     const ip = getIpAddress(req);
     res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.status(200).send(ip + '\n');
     return;
   }
 
-  // For browser requests, serve the built React app's index.html
-  res.setHeader('Content-Type', 'text/html');
-  res.status(200).send(`
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <link rel="icon" type="image/svg+xml" href="/favicon.png" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>I Know My IP</title>
-        <script type="module" crossorigin src="/assets/index.js"></script>
-        <link rel="stylesheet" crossorigin href="/assets/index.css">
-      </head>
-      <body>
-        <div id="root"></div>
-      </body>
-    </html>
-  `);
+  // For browser requests, redirect to static index.html
+  res.writeHead(302, {
+    Location: '/index.html'
+  });
+  res.end();
 }
 
 function getIpAddress(req: VercelRequest): string {
