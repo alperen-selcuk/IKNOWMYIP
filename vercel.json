@@ -23,10 +23,6 @@
       "dest": "/api/dns.ts"
     },
     {
-      "src": "/",
-      "dest": "/api/index.ts"
-    },
-    {
       "src": "/assets/(.*)",
       "headers": {
         "cache-control": "public, max-age=31536000, immutable"
@@ -36,8 +32,12 @@
       "handle": "filesystem"
     },
     {
+      "src": "/",
+      "dest": "/api/index.ts"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/api/index.ts"
     }
   ],
   "functions": {
